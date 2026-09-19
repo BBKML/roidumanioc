@@ -1294,11 +1294,19 @@ verts avant et après. Correctifs appliqués :
   invalide le cache `SiteContent` via un `Model::where(...)->delete()` plutôt qu'une
   instance (contourne l'invalidation par events) — un rollback de migration est rare en
   production, laissé tel quel plutôt que de complexifier une migration ponctuelle déjà
-  appliquée ; `Testimonial`/`Award::localized()` dupliquent (au lieu de partager) la même
-  logique de repli FR/EN que `SiteContent::localizeSection()` — actuellement cohérentes,
-  mais rien ne garantit qu'elles le restent si l'une évolue sans l'autre ; le cookie de
-  langue (`Cookie::forever('locale', ...)`) dure en réalité ~5 ans, pas « 1 an » comme
-  décrit plus haut — cosmétique, `Cookie::forever()` reste le bon choix fonctionnel.
+  appliquée ; le cookie de langue (`Cookie::forever('locale', ...)`) dure en réalité ~5 ans,
+  pas « 1 an » comme décrit plus haut — cosmétique, `Cookie::forever()` reste le bon choix
+  fonctionnel.
+- **`Testimonial`/`Award::localized()` — corrigé après coup** : les deux modèles
+  dupliquaient (au lieu de partager) une logique de repli FR/EN identique, byte pour byte,
+  à celle de `SiteContent::localizeSection()` — pas fusionnée avec elle car forme de
+  stockage différente (paire de colonnes `$field`/`${field}_en` ici, valeur bilingue brute
+  `{"fr":...,"en":...}` là-bas), mais la duplication ENTRE `Testimonial` et `Award`
+  eux-mêmes n'avait aucune raison d'exister. Extraite dans
+  `App\Models\Concerns\HasLocalizedFallback` (trait), utilisé par les deux modèles — un
+  seul endroit à faire évoluer désormais. `tests/Unit/HasLocalizedFallbackTest.php`
+  (nouveau, aucun test ne couvrait `localized()` avant) verrouille le comportement des deux
+  modèles à travers le trait.
 
 ## Gotcha environnement
 
