@@ -332,9 +332,13 @@ classiques, ce n'est pas un changement d'architecture générale.
   d'activation sur `/mon-compte` (`Account\Settings`) ; dans la nav du layout learner, le groupe
   « Mon royaume » affiche « Profil producteur » (+ « Mes offres » une fois activé) / « Espace
   acheteur » si le profil existe, sinon « Devenir producteur/acheteur » (même route, badge
-  `Activer`). `activity_type` (`App\Enums\ActivityType`) reprend le vocabulaire de
+  `Activer`). `activity_type` (`App\Enums\ActivityType`) reprend à l'origine le vocabulaire de
   `MarketplaceListing.type` (Récolte/Bouture/Transformé/Intrant) mais stocké comme enum PHP à
-  valeurs slug, pas les libellés bruts utilisés par `MarketplaceListing`. `buyer_type` :
+  valeurs slug, pas les libellés bruts utilisés par `MarketplaceListing` — **+ `Elevage`
+  ajouté sur demande explicite** : la plateforme n'a jamais été restreinte au manioc ni même
+  aux cultures au niveau des données (`CropOffer.product_name`/`BuyerNeed.product_wanted`
+  sont du texte libre sans liste de produits autorisés depuis le début), seule cette
+  catégorisation de profil ne couvrait pas l'élevage. `buyer_type` :
   `App\Enums\BuyerType`. Logo producteur : même pattern d'upload que
   `ContentManager::storeUploadedImages()` (disque `public`, dossier `producer-profiles/`).
   `verified_at`/`verified_by` (`ProducerProfile`) volontairement absents du `$fillable` — jamais
@@ -1307,6 +1311,44 @@ verts avant et après. Correctifs appliqués :
   seul endroit à faire évoluer désormais. `tests/Unit/HasLocalizedFallbackTest.php`
   (nouveau, aucun test ne couvrait `localized()` avant) verrouille le comportement des deux
   modèles à travers le trait.
+
+## Ouverture explicite à toute culture et à l'élevage (Phase 21)
+
+Demande directe : « il faut laisser les gens mettre ce qu'ils veulent, tout ce qui concerne
+élevage et agriculture ». Constat avant d'agir : la plateforme n'a **jamais** été
+techniquement limitée au manioc — `CropOffer.product_name`/`BuyerNeed.product_wanted` sont
+du texte libre sans liste de produits autorisés depuis la Phase 2 (rien n'empêchait déjà de
+publier « Maïs », « Poulet », « Mouton », « Bœuf »…). Le seul vrai manque : la
+catégorisation de profil `App\Enums\ActivityType` (Récolte/Bouture/Transformé/Intrant)
+n'avait aucune option pour l'élevage, forçant un éleveur à choisir une case qui ne lui
+correspond pas.
+
+- **`ActivityType::Elevage` ajouté** (valeur `elevage`, libellé « Élevage ») — apparaît
+  automatiquement partout où l'enum est consommé sans liste codée en dur ailleurs :
+  onglets de filtre sur `/producteurs` (`Public\Producers`, `ActivityType::cases()`),
+  formulaire d'activation du profil producteur (`Learner\ProducerProfile`, même
+  `cases()` + `Rule::enum(ActivityType::class)`), fiche admin (`Admin\Producers`/
+  `ProducerShow`, simple `->label()`). Aucun de ces call sites n'avait de liste figée à
+  mettre à jour à la main — seul le `match()` exhaustif de `ActivityType::label()`
+  lui-même devait gagner ce cas (sans quoi `UnhandledMatchError` au premier appel).
+- **`MarketplaceListing.type`** (l'ancien panneau d'annonces, distinct du catalogue
+  producteur/acheteur — cf. plus haut) n'a jamais eu de liste fermée : c'est une colonne
+  string libre, sans formulaire de création self-service dans cette V1 (seulement
+  seedée/gérée par l'admin) — rien à changer là, il acceptait déjà n'importe quel `type`.
+- **Textes qui énuméraient exhaustivement les 4 anciennes catégories** (et laissaient donc
+  croire, à tort, que l'élevage n'était pas bienvenu) corrigés pour mentionner l'élevage :
+  méta-description SEO de `/producteurs` (`Public\Producers`), accroche « Devenir
+  producteur » sur `/mon-compte` (texte codé en dur dans `account/settings.blade.php`,
+  pas du CMS), et le texte par défaut de la section CMS `producteurs_section.opportunities`
+  dans `SiteContentSeeder` (éditable ensuite dans Contenu du site → si déjà seedé en
+  production, le nouveau texte par défaut ne s'applique qu'aux nouvelles installations —
+  modifier le texte existant se fait comme d'habitude depuis l'écran admin, pas en
+  re-seedant).
+- **Hors périmètre de cette demande, volontairement non touché** : le nom de la
+  plateforme (« Le Roi du Manioc ») et son identité visuelle restent inchangés — la
+  demande porte sur ce que les gens peuvent PUBLIER, pas sur un rebranding. `BuyerType`
+  (Transformateur/Commerçant/Restaurant/Grossiste/Distributeur/Autre) était déjà
+  générique et couvre un acheteur de bétail sans modification.
 
 ## Gotcha environnement
 

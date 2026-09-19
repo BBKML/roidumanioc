@@ -77,7 +77,7 @@
           <a href="{{ route('learner.producer') }}" class="btn ghost" wire:navigate>Modifier mon profil producteur</a>
         @else
           <p style="font-size:.88rem;color:var(--ink-soft)">
-            Vendez vos récoltes, boutures, produits transformés ou intrants sur la marketplace.
+            Vendez vos récoltes, boutures, produits transformés, intrants ou animaux d'élevage sur la marketplace.
           </p>
           <a href="{{ route('learner.producer') }}" class="btn" wire:navigate>Devenir producteur</a>
         @endif

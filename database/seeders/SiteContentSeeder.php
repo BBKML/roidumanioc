@@ -98,7 +98,7 @@ class SiteContentSeeder extends Seeder
                 'lead' => 'Chaque producteur peut publier ses récoltes, chaque acheteur peut publier ses besoins — sans intermédiaire, sans commission cachée.',
                 'image' => ['src' => 'img/recolte-village.jpg', 'alt' => 'Récolte de manioc dans un village du royaume'],
                 'opportunities' => [
-                    'Vendez vos récoltes, boutures, produits transformés ou intrants directement aux acheteurs.',
+                    'Vendez vos récoltes, boutures, produits transformés, intrants ou animaux d\'élevage directement aux acheteurs.',
                     'Trouvez des acheteurs fiables et faites connaître votre exploitation.',
                     "Publiez vos besoins d'achat et laissez les producteurs vérifiés vous répondre.",
                 ],

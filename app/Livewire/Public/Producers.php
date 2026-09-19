@@ -18,7 +18,7 @@ use Livewire\WithPagination;
  * personnelle n'est exposée ici (§8.2) ; pas de fiche détaillée ni de mise en relation
  * (Phase 5), uniquement un annuaire filtrable.
  */
-#[Layout('components.public-layout', ['title' => 'Producteurs', 'description' => 'Le catalogue des producteurs de manioc vérifiés du Roi du Manioc : récoltes, boutures, produits transformés et intrants.'])]
+#[Layout('components.public-layout', ['title' => 'Producteurs', 'description' => 'Le catalogue des producteurs agricoles et éleveurs vérifiés du Roi du Manioc : récoltes, boutures, produits transformés, intrants et élevage.'])]
 class Producers extends Component
 {
     use WithPagination;

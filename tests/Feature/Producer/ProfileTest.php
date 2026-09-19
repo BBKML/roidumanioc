@@ -37,6 +37,24 @@ class ProfileTest extends TestCase
         $this->assertNotNull($profile->terms_accepted_at);
     }
 
+    /** La plateforme n'est pas restreinte aux cultures — un éleveur doit pouvoir s'inscrire. */
+    public function test_learner_activates_a_producer_profile_with_the_livestock_activity_type(): void
+    {
+        $user = User::factory()->create();
+
+        Livewire::actingAs($user)->test(ProducerProfile::class)
+            ->set('business_name', 'Élevage Kouadio')
+            ->set('zone', 'Bouaké')
+            ->set('activity_type', 'elevage')
+            ->set('acceptedTerms', true)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $profile = ProducerProfileModel::where('user_id', $user->id)->firstOrFail();
+        $this->assertSame('elevage', $profile->activity_type->value);
+        $this->assertSame('Élevage', $profile->activity_type->label());
+    }
+
     /**
      * Audit UX (Phase 2/3) : "Profil producteur" partout, plus de mélange avec
      * "Espace producteur" (titre de page vs titre de la carte du formulaire). Le bouton

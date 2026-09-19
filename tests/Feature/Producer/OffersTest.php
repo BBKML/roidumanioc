@@ -50,6 +50,36 @@ class OffersTest extends TestCase
         $this->assertSame($user->producerProfile->id, $offer->producer_profile_id);
     }
 
+    /**
+     * La plateforme n'a jamais restreint `product_name` à une liste de produits autorisés
+     * (texte libre depuis toujours) — un éleveur doit pouvoir publier une offre de bétail
+     * exactement comme un producteur de manioc, sans traitement spécial ni contournement.
+     */
+    public function test_a_livestock_producer_can_publish_an_offer(): void
+    {
+        $user = User::factory()->create();
+        ProducerProfile::create([
+            'user_id' => $user->id, 'business_name' => 'Élevage Kouadio',
+            'zone' => 'Bouaké', 'activity_type' => 'elevage',
+        ]);
+
+        Livewire::actingAs($user)->test(OfferForm::class)
+            ->set('product_name', 'Mouton sur pied')
+            ->set('quantity', '5')
+            ->set('unit', 'unite')
+            ->set('price_indicative', 75000)
+            ->set('location', 'Bouaké')
+            ->set('status', 'publiee')
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertRedirect();
+
+        $offer = CropOffer::firstOrFail();
+        $this->assertSame('Mouton sur pied', $offer->product_name);
+        $this->assertSame('unite', $offer->unit->value);
+        $this->assertSame('elevage', $offer->producerProfile->activity_type->value);
+    }
+
     public function test_quantity_must_be_positive_and_price_must_be_a_positive_integer_or_null(): void
     {
         $user = $this->makeProducer();

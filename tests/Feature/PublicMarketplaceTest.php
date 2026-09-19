@@ -147,6 +147,34 @@ class PublicMarketplaceTest extends TestCase
             ->assertSee('Boutures du Nord');
     }
 
+    /**
+     * La plateforme n'est pas restreinte aux cultures — un éleveur publié doit apparaître
+     * dans le catalogue public exactement comme un producteur de manioc, et être
+     * filtrable via la catégorie « Élevage » ajoutée à ActivityType.
+     */
+    public function test_a_livestock_offer_appears_in_the_public_catalog_and_is_filterable(): void
+    {
+        $breeder = User::factory()->create();
+        $breederProfile = ProducerProfile::create([
+            'user_id' => $breeder->id, 'business_name' => 'Élevage Kouadio',
+            'zone' => 'Bouaké', 'activity_type' => 'elevage',
+        ]);
+        CropOffer::create([
+            'producer_profile_id' => $breederProfile->id, 'product_name' => 'Mouton sur pied',
+            'quantity' => 5, 'unit' => 'unite', 'location' => 'Bouaké',
+            'status' => 'publiee', 'is_available' => true,
+        ]);
+
+        $this->producerWithOffer(); // « Ferme Kouassi », activity_type recolte
+
+        Livewire::test(Producers::class)
+            ->assertSee('Élevage Kouadio')
+            ->assertSee('Ferme Kouassi')
+            ->set('activityType', 'elevage')
+            ->assertSee('Élevage Kouadio')
+            ->assertDontSee('Ferme Kouassi');
+    }
+
     public function test_producers_zone_and_product_filters_are_populated_from_published_offers(): void
     {
         $this->producerWithOffer();
