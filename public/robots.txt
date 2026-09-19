@@ -1,2 +1,6 @@
 User-agent: *
-Disallow:
+Disallow: /admin
+Disallow: /mon-espace
+
+# Adapter le domaine si nécessaire lors de la mise en production.
+Sitemap: https://roidumanioc.ci/sitemap.xml

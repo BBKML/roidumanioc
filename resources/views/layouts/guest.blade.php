@@ -1,30 +1,46 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
+@props([
+    'brandTitle' => __('guest.login.brand_title'),
+])
+<!doctype html>
+<html lang="{{ app()->getLocale() }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<title>{{ $title ?? __('guest.login.title') }} — Le Roi du Manioc</title>
+<link rel="icon" href="{{ asset('img/logo.png') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700;800&display=swap">
+@vite(['resources/css/auth.css', 'resources/js/auth.js'])
+</head>
+<body>
+<div class="auth">
+  <aside class="auth-brand">
+    <div class="auth-brand-top">
+      <a class="b-logo" href="{{ route('home') }}">
+        <img src="{{ asset('img/logo.png') }}" alt="">
+        <span><b>Le Roi du Manioc</b><span class="tag">L'or des visionnaires</span></span>
+      </a>
+      <div class="lang-switch" role="group" aria-label="{{ __('guest.lang_switch_label') }}">
+        <a href="{{ route('locale.switch', 'fr') }}" class="{{ app()->getLocale() === 'fr' ? 'active' : '' }}" hreflang="fr" aria-label="Français" title="Français"><x-flag-icon code="fr" /></a>
+        <a href="{{ route('locale.switch', 'en') }}" class="{{ app()->getLocale() === 'en' ? 'active' : '' }}" hreflang="en" aria-label="English" title="English"><x-flag-icon code="en" /></a>
+      </div>
+    </div>
+    <h2>{{ $brandTitle }}</h2>
+    <ul>
+      <li>{{ __('guest.sidebar.bullet1') }}</li>
+      <li>{{ __('guest.sidebar.bullet2') }}</li>
+      <li>{{ __('guest.sidebar.bullet3') }}</li>
+    </ul>
+    <a class="back" href="{{ route('home') }}">{{ __('guest.back_to_site') }}</a>
+  </aside>
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
-
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="font-sans text-gray-900 antialiased">
-        <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
-            <div>
-                <a href="/">
-                    <x-application-logo class="w-20 h-20 fill-current text-gray-500" />
-                </a>
-            </div>
-
-            <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
-                {{ $slot }}
-            </div>
-        </div>
-    </body>
+  <main class="auth-scroll">
+    <div class="auth-form">
+      {{ $slot }}
+    </div>
+  </main>
+</div>
+</body>
 </html>

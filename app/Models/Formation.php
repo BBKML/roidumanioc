@@ -71,6 +71,24 @@ class Formation extends Model
         return $this->enrollments()->where('status', EnrollmentStatus::Validee)->count();
     }
 
+    /**
+     * Avancement d'un apprenant : ['done' => int, 'total' => int, 'pct' => int].
+     */
+    public function progressFor(User $user): array
+    {
+        $lessonIds = $this->lessons()->pluck('id');
+        $total = $lessonIds->count();
+        $done = $total
+            ? LessonProgress::where('user_id', $user->id)->whereIn('lesson_id', $lessonIds)->count()
+            : 0;
+
+        return [
+            'done' => $done,
+            'total' => $total,
+            'pct' => $total ? (int) round($done / $total * 100) : 0,
+        ];
+    }
+
     public function getRouteKeyName(): string
     {
         return 'slug';

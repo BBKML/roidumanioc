@@ -1,47 +1,47 @@
-<x-guest-layout>
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+<x-guest-layout :title="__('guest.login.title')" :brand-title="__('guest.login.brand_title')">
 
-    <form method="POST" action="{{ route('login') }}">
-        @csrf
+  <h1>{{ __('guest.login.heading') }}</h1>
+  <p class="sub">{{ __('guest.login.subtitle') }}</p>
 
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
+  @if (session('status'))
+    <div class="auth-ok">{{ session('status') }}</div>
+  @endif
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+  @if ($errors->any())
+    <div class="auth-err">
+      @if ($errors->count() === 1)
+        {{ $errors->first() }}
+      @else
+        <b>{{ __('guest.check_form') }}</b>
+        <ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+      @endif
+    </div>
+  @endif
 
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="current-password" />
+  @include('auth.partials.google')
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
+  <form method="POST" action="{{ route('login') }}">
+    @csrf
 
-        <!-- Remember Me -->
-        <div class="block mt-4">
-            <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
-                <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
-            </label>
-        </div>
+    <div class="field">
+      <label for="login">{{ __('guest.login.identifier') }}</label>
+      <input id="login" type="text" name="login" value="{{ old('login') }}" required autofocus autocomplete="username" placeholder="vous@exemple.ci ou 07 00 00 00 00">
+    </div>
 
-        <div class="flex items-center justify-end mt-4">
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
-                    {{ __('Forgot your password?') }}
-                </a>
-            @endif
+    @include('auth.partials.password-field', ['name' => 'password', 'placeholder' => __('guest.login.password_placeholder')])
 
-            <x-primary-button class="ms-3">
-                {{ __('Log in') }}
-            </x-primary-button>
-        </div>
-    </form>
+    <div class="auth-row">
+      <label><input type="checkbox" name="remember"> {{ __('guest.login.remember_me') }}</label>
+      @if (Route::has('password.request'))
+        <a href="{{ route('password.request') }}">{{ __('guest.login.forgot_password') }}</a>
+      @endif
+    </div>
+
+    <button type="submit" class="btn">{{ __('guest.login.submit') }}</button>
+  </form>
+
+  @if (Route::has('register'))
+    <p class="auth-switch">{{ __('guest.login.no_account') }} <a href="{{ route('register') }}">{{ __('guest.login.create_account') }}</a></p>
+  @endif
+
 </x-guest-layout>

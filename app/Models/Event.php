@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 class Event extends Model
 {
     protected $fillable = [
-        'title', 'date_label', 'starts_at', 'type', 'status', 'link', 'description', 'position',
+        'title', 'date_label', 'starts_at', 'type', 'status', 'link', 'description', 'position', 'image_path',
     ];
 
     protected function casts(): array

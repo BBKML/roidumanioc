@@ -100,12 +100,18 @@ class FormationSeeder extends Seeder
             $formation->lessons()->delete();
             foreach ($lessons as $i => $title) {
                 $isLast = $i === count($lessons) - 1;
+
+                // Démo : la 1re leçon a une vidéo YouTube, les autres restent « à compléter ».
+                $video = $i === 0
+                    ? ['type' => 'video', 'video_provider' => 'link', 'video_url' => 'https://www.youtube.com/watch?v=aqz-KE-bpKQ']
+                    : ['type' => $isLast ? 'quiz' : 'video', 'video_provider' => 'none'];
+
                 $formation->lessons()->create([
                     'title' => $title,
-                    'type' => $isLast ? 'quiz' : 'video',
                     'duration_label' => (8 + $i * 4).' min',
                     'position' => $i,
                     'content' => 'Contenu de la leçon « '.$title.' » — à rédiger dans le back-office.',
+                    ...$video,
                 ]);
             }
         }

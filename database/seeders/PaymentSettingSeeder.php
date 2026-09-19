@@ -18,6 +18,8 @@ class PaymentSettingSeeder extends Seeder
             'bank_name' => "Ecobank Côte d'Ivoire",
             'rib' => 'CI93 CI000 01234 5678901234 56',
             'intl_link' => 'https://flutterwave.com/pay/roi-du-manioc',
+            'delivery_fee' => 2000,
+            'delivery_note' => 'Livraison Abidjan sous 48 h · autres villes : délai et frais à convenir.',
         ]);
     }
 }

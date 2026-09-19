@@ -97,13 +97,13 @@ class PaymentFlowTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin', 'password' => bcrypt('secret1234')]);
         $learner = User::factory()->create(['role' => 'apprenant', 'password' => bcrypt('secret1234')]);
 
-        $this->post('/login', ['email' => $admin->email, 'password' => 'secret1234'])
+        $this->post('/login', ['login' => $admin->email, 'password' => 'secret1234'])
             ->assertRedirect('/dashboard');
         $this->get('/dashboard')->assertRedirect(route('admin.dashboard'));
 
         $this->post('/logout');
 
-        $this->post('/login', ['email' => $learner->email, 'password' => 'secret1234']);
+        $this->post('/login', ['login' => $learner->email, 'password' => 'secret1234']);
         $this->get('/dashboard')->assertRedirect(route('learner.dashboard'));
     }
 }

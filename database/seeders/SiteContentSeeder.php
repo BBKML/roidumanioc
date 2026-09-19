@@ -28,6 +28,7 @@ class SiteContentSeeder extends Seeder
             'hero' => ['label' => 'Accueil — bandeau principal', 'data' => [
                 'eyebrow' => "Royaume du Manioc d'Afrique",
                 'title' => 'Le manioc, matière royale.',
+                'title_html' => 'Le manioc,<br>matière <em>royale</em>.',
                 'text' => "Formations, marketplace, intrants certifiés et notre Placali du Roi : tout l'écosystème pour réussir dans la culture du manioc et en vivre dignement.",
                 'button1' => 'Découvrir le Placali du Roi',
                 'button2' => 'Accéder aux formations',
@@ -55,7 +56,7 @@ class SiteContentSeeder extends Seeder
             'piliers' => ['label' => 'Les 4 piliers', 'data' => [
                 'eyebrow' => 'Ce que nous faisons',
                 'title' => 'Quatre piliers, un même royaume.',
-                'lead' => "Chaque activité renforce les autres — le producteur formé vend mieux, le marché nourrit la marque, la marque finance la formation.",
+                'lead' => 'Chaque activité renforce les autres — le producteur formé vend mieux, le marché nourrit la marque, la marque finance la formation.',
                 'cards' => [
                     ['title' => 'Formations', 'text' => 'Culture, fertilisation, transformation et commercialisation, expliquées pas à pas par des formateurs de terrain.', 'image' => ['src' => 'img/formation-champ.jpg', 'alt' => 'Formation pratique au champ']],
                     ['title' => 'Marketplace', 'text' => 'Manioc frais, attiéké, gari, placali : achetez et vendez au juste prix, entre producteurs vérifiés.', 'image' => ['src' => 'img/recolte-village.jpg', 'alt' => 'Récolte de manioc frais au village']],
@@ -66,11 +67,11 @@ class SiteContentSeeder extends Seeder
             'placali' => ['label' => 'Placali du Roi', 'data' => [
                 'eyebrow' => 'Le produit signature',
                 'title' => 'Placali du Roi',
-                'text' => "Le vrai placali, prêt en 10 à 15 minutes. Sans conservateur, sans additif — juste du manioc africain, valorisé comme il se doit.",
+                'text' => 'Le vrai placali, prêt en 10 à 15 minutes. Sans conservateur, sans additif — juste du manioc africain, valorisé comme il se doit.',
                 'atouts' => ['100 % manioc naturel', 'Goût authentique', 'Sans conservateur', 'Sans additif', 'Prêt en 10–15 min'],
                 'price' => '1 500 FCFA',
                 'price_detail' => '/ portion · sachet 1 kg',
-                'button' => 'Commander le Placali du Roi',
+                'button' => 'Découvrir le Placali du Roi',
                 'image_bg' => ['src' => 'img/placali-champ.jpg', 'alt' => 'Producteur avec le Placali du Roi au champ'],
                 'image_product' => ['src' => 'img/placali-etal.jpg', 'alt' => 'Sachet de Placali du Roi posé sur un étal'],
             ]],
@@ -78,11 +79,32 @@ class SiteContentSeeder extends Seeder
                 'eyebrow' => 'Formations',
                 'title' => 'Apprendre le manioc, sérieusement.',
                 'lead' => "Des parcours courts et concrets, du premier plant jusqu'à la vente. Deux formations d'introduction sont entièrement gratuites.",
+                'image' => ['src' => 'img/formation-champ.jpg', 'alt' => 'Formation pratique dans un champ de manioc'],
             ]],
             'marketplace_section' => ['label' => 'Section Marketplace (titres)', 'data' => [
                 'eyebrow' => 'Marketplace',
                 'title' => 'Le marché du manioc, en confiance.',
                 'lead' => 'Producteurs vérifiés, prix affichés, livraison organisée. Un aperçu des offres du moment.',
+                'image' => ['src' => 'img/attieke-marche.jpg', 'alt' => "Vente d'attiéké et de manioc au marché"],
+            ]],
+            'evenements_section' => ['label' => 'Section Événements (titres)', 'data' => [
+                'eyebrow' => 'Événements & rencontres',
+                'title' => 'Les prochains<br><em>rendez-vous</em> du royaume.',
+                'lead' => 'Rencontres, formations en présentiel, foires et journées portes ouvertes : suivez ici les activités à venir du Roi du Manioc.',
+            ]],
+            'producteurs_section' => ['label' => 'Section Producteurs & Acheteurs', 'data' => [
+                'eyebrow' => 'Producteurs & acheteurs',
+                'title' => 'Vendez ou achetez, directement entre vous.',
+                'lead' => 'Chaque producteur peut publier ses récoltes, chaque acheteur peut publier ses besoins — sans intermédiaire, sans commission cachée.',
+                'image' => ['src' => 'img/recolte-village.jpg', 'alt' => 'Récolte de manioc dans un village du royaume'],
+                'opportunities' => [
+                    'Vendez vos récoltes, boutures, produits transformés ou intrants directement aux acheteurs.',
+                    'Trouvez des acheteurs fiables et faites connaître votre exploitation.',
+                    "Publiez vos besoins d'achat et laissez les producteurs vérifiés vous répondre.",
+                ],
+                'relation_text' => "Le Roi du Manioc ne touche pas l'argent : nous mettons en relation, la transaction se fait directement entre vous.",
+                'button_producer' => 'Devenir producteur',
+                'button_buyer' => 'Devenir acheteur',
             ]],
             'communaute' => ['label' => 'Communauté & témoignages', 'data' => [
                 'eyebrow' => 'La communauté',
@@ -117,8 +139,18 @@ class SiteContentSeeder extends Seeder
                 'instagram' => 'https://instagram.com/roidumanioc',
                 'city' => "Yamoussoukro, Côte d'Ivoire",
                 'email' => 'contact@roidumanioc.ci',
+                'hours' => 'Lun–Ven, 8h–17h',
                 'newsletter' => 'Recevez nos conseils manioc chaque semaine.',
                 'copyright' => "© 2026 Royaume du Manioc d'Afrique. Tous droits réservés.",
+                'map_lat' => '6.8206',
+                'map_lng' => '-5.2767',
+                'map_zoom' => '14',
+            ]],
+            // Texte fourni par Le Roi du Manioc — volontairement vide au seed, jamais rédigé ici (§44).
+            'legal' => ['label' => 'Mentions légales & confidentialité', 'data' => [
+                'mentions_legales' => '',
+                'politique_confidentialite' => '',
+                'charte_utilisation' => '',
             ]],
         ];
 
@@ -126,10 +158,12 @@ class SiteContentSeeder extends Seeder
         foreach ($sections as $key => $section) {
             SiteContent::updateOrCreate(
                 ['key' => $key],
-                ['label' => $section['label'], 'data' => $section['data'], 'position' => $pos++],
+                ['label' => $section['label'], 'data' => SiteContent::wrapMonolingual($section['data'], $key), 'position' => $pos++],
             );
         }
 
+        // Version anglaise volontairement vide : SiteContent::localizeSection() replie sur le
+        // français tant que l'admin n'a pas rempli la traduction dans l'écran "Contenu du site".
         $testimonials = [
             ['quote' => 'Merci pour la formation sur la fertilisation, mes plants sont en pleine croissance !', 'author_name' => 'Ahou S.', 'author_role' => 'Productrice · Adzopé'],
             ['quote' => "J'ai posé une question sur mes feuilles qui jaunissaient, j'ai eu trois réponses utiles le jour même.", 'author_name' => 'Kouassi D.', 'author_role' => 'Producteur · Daloa'],

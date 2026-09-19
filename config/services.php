@@ -35,4 +35,19 @@ return [
         ],
     ],
 
+    // Connexion Google (OAuth2). Laisser vide pour désactiver le bouton « Continuer avec Google ».
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
+    ],
+
+    // Hébergement vidéo Bunny Stream (recommandé pour les formations payantes).
+    // Avec `token_key`, les URL d'intégration sont signées et expirent -> non partageables.
+    'bunny' => [
+        'library_id' => env('BUNNY_STREAM_LIBRARY_ID'),
+        'token_key' => env('BUNNY_STREAM_TOKEN_KEY'),
+        'token_ttl' => (int) env('BUNNY_STREAM_TOKEN_TTL', 4 * 3600),
+    ],
+
 ];
