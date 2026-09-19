@@ -676,13 +676,19 @@ classiques, ce n'est pas un changement d'architecture générale.
     actif — appliqués même si un acheteur n'est jamais admin en pratique, coût nul).
   - **`Admin\ConnectStats`** (`/admin/mise-en-relation`) : composant à part plutôt qu'une
     extension d'`Admin\Dashboard` (déjà chargé), même esprit « agrégats seuls, pas de
-    filtres/pagination ». **`Collaboration::estimatedValue(): int`** — `agreed_price_total`
-    n'est renseigné par aucun écran de cette V1 (négociation restée dans la messagerie,
-    Phase 6) et vaut donc toujours `null` en pratique ; pour le « volume ESTIMÉ » du §37,
-    la méthode retombe sur le prix/budget indicatif (`price_indicative`/
-    `budget_indicative`) de l'offre ou du besoin d'origine — exactement pourquoi ce chiffre
-    est présenté comme un estimé, jamais un montant réconcilié. Hors périmètre (explicite,
-    §37) : pas de tableau de bord BI avancé, seulement les compteurs demandés.
+    filtres/pagination ». **`Collaboration::estimatedValue(): int`** — à l'origine (Phase 6-10)
+    `agreed_price_total` n'était renseigné par aucun écran et valait donc toujours `null` en
+    pratique, d'où le repli sur le prix/budget indicatif (`price_indicative`/
+    `budget_indicative`) de l'offre ou du besoin d'origine. **Depuis la Phase 14** (carte de
+    proposition structurée dans le chat, cf. plus bas), une proposition peut porter un prix
+    et `ConnectionRequest::createCollaborationAgreement()` le reprend dans
+    `agreed_price_total` — donc `estimatedValue()` peut désormais retourner le montant
+    RÉELLEMENT négocié plutôt que l'estimé, tout en gardant son repli pour les
+    collaborations sans proposition chiffrée. Le nom de la méthode reste « estimated » par
+    cohérence historique même si la valeur n'est plus toujours un estimé. Hors périmètre
+    (explicite, §37) : pas de tableau de bord BI avancé, seulement les compteurs demandés.
+    (`Admin\ConnectStats` lui-même a été supprimé en Phase 16, fusionné dans
+    `Admin\Dashboard` — voir plus bas.)
 - **Indicateur communauté sur l'accueil** (§8.1, Phase 11) : `HomeController::index()`
   calcule `verifiedProducersCount`/`completedCollaborationsCount` depuis la base
   (`ProducerProfile::verified()->active()->count()` / `Collaboration::where('status',
@@ -742,7 +748,7 @@ classiques, ce n'est pas un changement d'architecture générale.
 - **Langue de la vitrine (FR par défaut / EN au choix)** : bascule FR/EN — deux icônes drapeau
   (🇫🇷/🇬🇧, pas un simple toggle) dans l'en-tête + menu mobile de `public-layout.blade.php` et dans
   `layouts/guest.blade.php` (écrans de connexion/inscription) — `route('locale.switch', $locale)`,
-  stockée dans un cookie `locale` (1 an) appliqué par le middleware `App\Http\Middleware\SetLocale`
+  stockée dans un cookie `locale` (persistant, `Cookie::forever()`) appliqué par le middleware `App\Http\Middleware\SetLocale`
   (append sur le groupe `web`, cf. `bootstrap/app.php`). Seule l'**interface statique** est traduite :
   `lang/{fr,en}/site.php` (vitrine : menus, boutons, titres non éditoriaux, pied de page, page
   Contact) et `lang/{fr,en}/guest.php` (connexion/inscription/mot de passe oublié/vérification
@@ -1002,16 +1008,23 @@ connexion (§11), et la messagerie d'une demande doit se sentir comme une vraie 
     écoute (`#[On(...)]`) pour rafraîchir SA PROPRE instance du modèle (stepper, pastille de
     statut) — sans ça, le panneau latéral resterait figé sur l'ancien statut après une
     action faite depuis le chat.
-  - **Refactor associé (sans changement de comportement)** : la création de la
-    `Collaboration` (+ sa `CollaborationDelivery`) à la confirmation vivait auparavant dans
-    une méthode privée de `Connect\Show` (`createCollaboration()`) — déplacée dans
-    `ConnectionRequest::confirmCollaboration()` lui-même (toujours idempotent via
-    `firstOrCreate`, toujours dans une transaction) pour que N'IMPORTE QUEL appelant
-    (l'écran principal, la carte de proposition dans le chat, un futur point d'entrée)
-    obtienne le même comportement automatique sans dupliquer cette création. Vérifié
-    contre les tests déjà existants (`ConnectionRequestTest`, `CollaborationTest`,
-    `ReviewTest`, `NotificationsTest`, `ConnectCollaborationsTest`…) — tous verts sans
-    modification, la sortie observable est identique.
+  - **Refactor associé — avec un changement de comportement réel, corrigeant un bug** : la
+    création de la `Collaboration` (+ sa `CollaborationDelivery`) à la confirmation vivait
+    auparavant dans une méthode privée de `Connect\Show` (`createCollaboration()`) —
+    déplacée dans `ConnectionRequest::confirmCollaboration()`/`createCollaborationAgreement()`
+    lui-même (toujours idempotent via `firstOrCreate`, toujours dans une transaction) pour
+    que N'IMPORTE QUEL appelant (l'écran principal, la carte de proposition dans le chat, un
+    futur point d'entrée) obtienne le même comportement automatique sans dupliquer cette
+    création. **Correction ⚠️ (audit Phase 20)** : contrairement à ce qu'affirmait cette
+    section avant l'audit, ce n'est PAS un changement neutre — le docblock de
+    `createCollaborationAgreement()` explique lui-même que `agreed_quantity`/`unit`/
+    `agreed_price_total` sont désormais repris de la DERNIÈRE proposition structurée quand
+    il y en a une, plutôt que systématiquement de l'offre/besoin d'origine comme avant («
+    constat en usage réel : `agreed_price_total` restait toujours `null` et la quantité
+    n'était jamais celle négociée »). Les tests existants restaient verts simplement parce
+    qu'aucun ne couvrait un scénario avec proposition chiffrée avant confirmation — pas
+    parce que la sortie était réellement identique. Voir aussi la note mise à jour sur
+    `Collaboration::estimatedValue()` plus haut.
 
 Tests : `tests/Feature/Connect/ProposalTest.php` (carte créée + statut avancé, garde de
 statut/acteur via l'ability `propose` existante, note toujours scannée/masquée §16,
@@ -1032,6 +1045,54 @@ correct).
   plutôt que deux pages distinctes juste mieux nommées. Voir Phase 15 ci-dessous pour la
   vraie fusion qui a suivi (les deux `Livewire\Producer\Dashboard`/`Buyer\Dashboard`
   créés en Phase 13 ont été supprimés au profit d'un seul écran).
+
+## Commandes structurées producteur↔acheteur — CropOrder (§10)
+
+**Absente de ce document jusqu'à l'audit qui l'a ajoutée** (les migrations datent du
+2026-09-28/29, juste après la Phase 14 ci-dessus) : un parcours de commande structuré
+façon « bouton Commander », **délibérément séparé** du système de mise en relation par
+chat (`ConnectionRequest`/`Conversation`/`Collaboration`) — pas de discussion libre ici,
+un objet métier à statuts explicites (`App\Enums\CropOrderStatus`, 13 états).
+
+- **Flux** : l'acheteur passe commande sur une offre (`App\Livewire\Buyer\CropOrderForm`,
+  action `App\Actions\CreateCropOrder`) → le producteur accepte/refuse → le producteur
+  soumet en privé (admin + producteur uniquement, jamais visible de l'acheteur) un prix
+  total et des frais de livraison proposés → **l'admin valide ou renvoie** ces conditions
+  (`CropOrder::approveDeliveryConditions()`/`rejectDeliveryConditions()`, pouvoir admin
+  exclusif) → une fois validées, acheteur et producteur négocient les frais de livraison
+  par contre-propositions successives (`crop_order_delivery_proposals`, historique
+  append-only, jamais écrasé — `App\Enums\DeliveryProposalStatus`) → acceptation → commande
+  `confirmee` avec un total figé (`total_amount`) → puis soit une **« Aide livraison »**
+  suivie par l'admin (`App\Models\DeliveryAssist`, 6 statuts, checklist manuelle —
+  *aucun* transporteur réel, aucune géolocalisation/calcul d'itinéraire, juste un suivi
+  administratif : les colonnes `courier_name`/`courier_contact` existent en base mais ne
+  sont écrites/affichées nulle part, vestige inerte à ne pas réactiver sans un vrai besoin),
+  soit une **livraison auto-organisée** déclarée directement par l'une des parties sans
+  admin (`declareSelfArrangedDelivery`/`confirmSelfArrangedDelivery`/
+  `cancelSelfArrangedDelivery`).
+- **Ne contredit pas le périmètre hors-scope du §33** (audité explicitement : pas de
+  gestion de transporteurs, pas de calcul d'itinéraire) — c'est un tracker de
+  checkout/exécution manuel, pas une intégration logistique.
+- **Même doctrine de garde-fous que Collaboration/ConnectionRequest** : chaque transition
+  a son `canXxxBy()`, `CropOrderPolicy` délègue 1:1, et `AppServiceProvider::boot()`
+  exclut les actions « une partie agit » (`$cropOrderPartyOnly`) du contournement admin
+  générique — seuls `approveDeliveryConditions`/`rejectDeliveryConditions`/
+  `markDeliveryAssistStep` restent des pouvoirs admin propres.
+- **Supervision admin** : `Admin\CropOrders` (`/admin/commandes-produits`, lecture seule +
+  validation des conditions) et `Admin\DeliveryAssists` (`/admin/aide-livraison`, la
+  checklist). Nav sous le groupe « Mise en relation ».
+- **Bug corrigé (audit)** : `requestDeliveryAssistance()` utilisait `firstOrCreate([], ...)`
+  sur une relation 1-ligne-par-commande — si une aide avait déjà été annulée
+  (`markDeliveryAssistStep(..., Annulee)`) puis redemandée, `firstOrCreate` réutilisait la
+  ligne figée à `annulee` au lieu d'en réinitialiser une nouvelle, et aucune transition ne
+  permettant de sortir de `annulee`, la commande restait bloquée dans `aide_livraison`
+  **définitivement** (et disparaissait du filtre admin par défaut, qui exclut
+  `annulee`/`livree`). Remplacé par `updateOrCreate([], [...])` qui remet explicitement
+  `status`/`requested_at` à `demande_aide` et vide `delivered_at`/`cancelled_at`.
+
+Tests : `tests/Feature/CropOrder/{CreateCropOrderTest,CropOrderFormAndListsTest,
+CropOrderNotificationsTest,CropOrderShowTest,CropOrderTransitionsTest}.php`,
+`tests/Feature/Admin/{AdminCropOrdersTest,AdminDeliveryAssistsTest}.php`.
 
 ## Tableau de bord UNIQUE par compte (Phase 15)
 
@@ -1174,6 +1235,70 @@ Tests : `tests/Feature/Connect/ConnectionRequestTest.php` étendu — le message
 devient la première (et seule) `ConversationMessage` du fil ; aucune conversation n'est
 créée quand le champ message est laissé vide (toujours facultatif) ; aucune notification
 dupliquée ; le texte reste soumis à `ContactDetector` comme n'importe quel message.
+
+## Audit de logique transverse (Phase 20)
+
+Tout le travail des Phases 2 à 18 (+ CropOrder ci-dessus) existait uniquement dans le
+répertoire de travail, jamais commité (seuls « Phase 1 » et « docs: CLAUDE.md » étaient
+sur `master`) — **committé en bloc à cette phase** avant tout correctif, comme filet de
+sécurité. Audit ciblé (4 passes : machine à états mise en relation/paiement, sécurité
+comptes/rôles, CropOrder, CMS/i18n/catalogues publics) contre le code réel, 657 tests
+verts avant et après. Correctifs appliqués :
+
+- **`App\Support\PhoneNumber::normalize()` ne retirait pas le préfixe `00225`** (seul
+  `225`/`+225` l'était) — un numéro saisi en `00225 07...` échappait à la déduplication et
+  rendait le compte injoignable en connexion sous tout autre format. Corrigé (vérifie
+  `00225` avant `225`) ; nouveau `tests/Unit/PhoneNumberTest.php`.
+- **Blocage définitif d'une CropOrder** en cas de nouvelle demande d'aide-livraison après
+  annulation — voir § CropOrder ci-dessus pour le détail.
+- **Comptes suspendus gardant l'accès à du contenu sensible en session déjà ouverte** :
+  `producers.favorite.toggle`, `payments.proof`, `lessons.video`/`lessons.attachment`
+  n'étaient gardées que par `auth`, jamais `active` — un compte suspendu qui ne visitait
+  aucune route `active` gardait donc le streaming vidéo/téléchargement de preuve/favoris
+  indéfiniment. Les trois routes portent désormais `['auth', 'active']`.
+- **Race condition (TOCTOU) sur l'anti-verrouillage admin** : `Admin\Members::changeRole/
+  toggleSuspend/deleteMember` lisaient `isLastActiveAdmin()` puis écrivaient sans
+  transaction ni verrou — deux suspensions croisées quasi simultanées entre les 2 seuls
+  admins actifs pouvaient chacune passer le garde-fou et aboutir à zéro admin actif.
+  `User::isLastActiveAdmin(bool $lockForUpdate = false)` accepte désormais un verrou
+  (`lockForUpdate()` sur TOUS les admins actifs, soi-même inclus — verrouiller seulement
+  « les autres » ne sérialiserait jamais deux transactions ciblant deux comptes
+  différents), posé par les trois méthodes de `Admin\Members` dans un `DB::transaction()`
+  qui verrouille aussi la ligne cible (`User::query()->lockForUpdate()->findOrFail(...)`).
+  `Admin\Buyers::toggleSuspend()` réutilise sciemment le même garde-fou non verrouillé
+  (défense en profondeur sur un compte qui n'est jamais admin en pratique) — laissé tel
+  quel, aucun risque réel.
+- **`role`/`status` de `User` retirés de `$fillable`** — ils y figuraient malgré la
+  convention documentée plus haut (« ne viennent JAMAIS d'une requête utilisateur »), sans
+  qu'aucun site d'appel actuel n'exploite la faille, mais sans aucun garde-fou structurel
+  contre un futur `fill($request->all())`/`create($request->validated())` qui les
+  inclurait par erreur — élévation de privilège instantanée le jour où ça arrive. Les deux
+  seuls sites légitimes (`Admin\Members::createMember`, déjà en `forceFill` ; et
+  `Auth\GoogleController::resolveUser`, converti de `User::create()` à `forceFill()` à
+  cette phase) n'en dépendaient pas.
+- **Un admin pouvait confirmer/rejeter son propre paiement** (`Payment::confirm()`/
+  `reject()` ne vérifiaient que le statut `a_verifier`, jamais que l'admin n'était pas
+  aussi le client) — aucun garde-fou structurel n'empêchait un compte admin, s'il devenait
+  aussi client de la plateforme, de s'auto-valider. Nouveau `Payment::canBeDecidedBy()`
+  (même idiome `canXxxBy` que Collaboration/ConnectionRequest) : refuse si
+  `$payment->user_id === $admin->id`, idempotent comme le reste.
+- **Documentation obsolète corrigée** : la Phase 14 affirmait à tort qu'aucun changement
+  de comportement n'accompagnait le déplacement de la création de `Collaboration` dans le
+  modèle (faux — voir la note ajoutée à cette section) ; le docblock de
+  `CollaborationStatus` affirmait à tort que `litige` pouvait être atteint automatiquement
+  depuis `contestPayment()` (faux — `contestPayment()` ramène toujours à `en_cours`) ;
+  fil d'ariane admin (`components/layouts/admin.blade.php`) complété pour
+  `admin.crop-orders`/`admin.delivery-assists`, oubliés lors de leur ajout.
+- **Repéré, non corrigé (risque jugé négligeable ou hors périmètre d'un audit de
+  logique)** : `database/migrations/..._add_evenements_section_to_site_contents.php::down()`
+  invalide le cache `SiteContent` via un `Model::where(...)->delete()` plutôt qu'une
+  instance (contourne l'invalidation par events) — un rollback de migration est rare en
+  production, laissé tel quel plutôt que de complexifier une migration ponctuelle déjà
+  appliquée ; `Testimonial`/`Award::localized()` dupliquent (au lieu de partager) la même
+  logique de repli FR/EN que `SiteContent::localizeSection()` — actuellement cohérentes,
+  mais rien ne garantit qu'elles le restent si l'une évolue sans l'autre ; le cookie de
+  langue (`Cookie::forever('locale', ...)`) dure en réalité ~5 ans, pas « 1 an » comme
+  décrit plus haut — cosmétique, `Cookie::forever()` reste le bon choix fonctionnel.
 
 ## Gotcha environnement
 
