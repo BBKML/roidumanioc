@@ -21,7 +21,9 @@ class PhoneNumber
             return null;
         }
 
-        if (strlen($digits) > 10 && str_starts_with($digits, '225')) {
+        if (strlen($digits) > 10 && str_starts_with($digits, '00225')) {
+            $digits = substr($digits, 5);
+        } elseif (strlen($digits) > 10 && str_starts_with($digits, '225')) {
             $digits = substr($digits, 3);
         }
 

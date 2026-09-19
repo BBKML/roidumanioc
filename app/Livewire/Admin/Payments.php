@@ -45,6 +45,8 @@ class Payments extends Component
         if ($payment->confirm(auth()->user())) {
             $this->safeMail(fn () => Mail::to($payment->user->email)->send(new PaymentConfirmedMail($payment)));
             $this->dispatch('notify', message: "Paiement {$payment->reference} confirmé — accès débloqué.");
+        } else {
+            $this->dispatch('notify', message: 'Impossible : vous ne pouvez pas confirmer votre propre paiement.');
         }
     }
 
@@ -63,6 +65,8 @@ class Payments extends Component
         if ($payment->reject(auth()->user(), $this->rejectReason)) {
             $this->safeMail(fn () => Mail::to($payment->user->email)->send(new PaymentRejectedMail($payment)));
             $this->dispatch('notify', message: "Paiement {$payment->reference} refusé.");
+        } else {
+            $this->dispatch('notify', message: 'Impossible : vous ne pouvez pas refuser votre propre paiement.');
         }
 
         $this->reset('rejecting', 'rejectReason');

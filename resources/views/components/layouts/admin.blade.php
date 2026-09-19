@@ -33,6 +33,8 @@
         'admin.connection-requests' => ['Mise en relation', 'Demandes'],
         'admin.collaborations' => ['Mise en relation', 'Collaborations'],
         'admin.reviews' => ['Mise en relation', 'Avis'],
+        'admin.crop-orders' => ['Mise en relation', 'Commandes produits'],
+        'admin.delivery-assists' => ['Mise en relation', 'Aide livraison'],
         'admin.conversations' => ['Pilotage', 'Conversations signalées'],
         'account.edit' => ['Compte', 'Mon compte'],
     ];

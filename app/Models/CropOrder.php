@@ -434,7 +434,14 @@ class CropOrder extends Model
         return true;
     }
 
-    /** Idempotent — un double clic ne duplique jamais la demande d'aide. */
+    /**
+     * Idempotent — un double clic ne duplique jamais la demande d'aide. `updateOrCreate`
+     * (pas `firstOrCreate`) : une aide déjà `annulee` sur cette commande (redemandée après
+     * un premier abandon) doit repartir de `demande_aide`, sinon la ligne resterait figée
+     * sur `annulee` alors que `CropOrder.status` serait reparti sur `aide_livraison` —
+     * plus aucune transition ne serait alors possible (`canMarkDeliveryAssistStepBy` ne
+     * sort jamais de `annulee`), bloquant la commande définitivement.
+     */
     public function requestDeliveryAssistance(User $actor): bool
     {
         if (! $this->canRequestDeliveryAssistanceBy($actor)) {
@@ -442,10 +449,12 @@ class CropOrder extends Model
         }
 
         DB::transaction(function () use ($actor) {
-            $this->deliveryAssist()->firstOrCreate([], [
+            $this->deliveryAssist()->updateOrCreate([], [
                 'requested_by' => $actor->id,
                 'status' => DeliveryAssistStatus::DemandeAide,
                 'requested_at' => now(),
+                'delivered_at' => null,
+                'cancelled_at' => null,
             ]);
 
             $this->update([

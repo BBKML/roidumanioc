@@ -9,6 +9,7 @@ use App\Mail\MemberPasswordResetMail;
 use App\Mail\MemberWelcomeMail;
 use App\Models\User;
 use App\Support\PhoneNumber;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -137,40 +138,64 @@ class Members extends Component
 
     public function changeRole(int $userId): void
     {
-        $user = User::findOrFail($userId);
+        abort_if($userId === auth()->id(), 403, 'Vous ne pouvez pas modifier votre propre rôle.');
 
-        abort_if($user->id === auth()->id(), 403, 'Vous ne pouvez pas modifier votre propre rôle.');
+        // Transaction + lockForUpdate : sans ça, deux admins qui se rétrogradent l'un
+        // l'autre au même instant peuvent chacun lire "il reste un autre admin" avant que
+        // l'autre transaction n'écrive, et laisser le royaume sans administrateur actif.
+        $result = DB::transaction(function () use ($userId) {
+            $user = User::query()->lockForUpdate()->findOrFail($userId);
+            $next = $user->isAdmin() ? UserRole::Apprenant : UserRole::Admin;
 
-        $next = $user->isAdmin() ? UserRole::Apprenant : UserRole::Admin;
+            if ($next === UserRole::Apprenant && $user->isLastActiveAdmin(lockForUpdate: true)) {
+                return null;
+            }
 
-        if ($next === UserRole::Apprenant && $user->isLastActiveAdmin()) {
+            // forceFill (pas update()) : 'role' n'est plus dans User::$fillable.
+            $user->forceFill(['role' => $next])->save();
+
+            return [$user->name, $next];
+        });
+
+        if ($result === null) {
             $this->dispatch('notify', message: 'Impossible : ce serait le dernier administrateur.');
 
             return;
         }
 
-        $user->update(['role' => $next]);
-        $this->dispatch('notify', message: "{$user->name} est maintenant ".$next->label().'.');
+        [$name, $next] = $result;
+        $this->dispatch('notify', message: "{$name} est maintenant ".$next->label().'.');
     }
 
     /* ---------------- Suspension ---------------- */
 
     public function toggleSuspend(int $userId): void
     {
-        $user = User::findOrFail($userId);
+        abort_if($userId === auth()->id(), 403, 'Vous ne pouvez pas suspendre votre propre compte.');
 
-        abort_if($user->id === auth()->id(), 403, 'Vous ne pouvez pas suspendre votre propre compte.');
+        $result = DB::transaction(function () use ($userId) {
+            $user = User::query()->lockForUpdate()->findOrFail($userId);
 
-        if ($user->isActive() && $user->isLastActiveAdmin()) {
+            if ($user->isActive() && $user->isLastActiveAdmin(lockForUpdate: true)) {
+                return null;
+            }
+
+            $wasActive = $user->isActive();
+            // forceFill (pas update()) : 'status' n'est plus dans User::$fillable.
+            $user->forceFill([
+                'status' => $wasActive ? UserStatus::Suspendu : UserStatus::Actif,
+            ])->save();
+
+            return $wasActive;
+        });
+
+        if ($result === null) {
             $this->dispatch('notify', message: 'Impossible : ce serait le dernier administrateur actif.');
 
             return;
         }
 
-        $user->update([
-            'status' => $user->isActive() ? UserStatus::Suspendu : UserStatus::Actif,
-        ]);
-        $this->dispatch('notify', message: $user->isActive() ? 'Compte réactivé.' : 'Compte suspendu.');
+        $this->dispatch('notify', message: $result ? 'Compte suspendu.' : 'Compte réactivé.');
     }
 
     /* ---------------- Réinitialisation du mot de passe ---------------- */
@@ -217,24 +242,29 @@ class Members extends Component
 
     public function deleteMember(int $userId): void
     {
-        $user = User::findOrFail($userId);
+        abort_if($userId === auth()->id(), 403, 'Vous ne pouvez pas supprimer votre propre compte ici.');
 
-        abort_if($user->id === auth()->id(), 403, 'Vous ne pouvez pas supprimer votre propre compte ici.');
+        $outcome = DB::transaction(function () use ($userId) {
+            $user = User::query()->lockForUpdate()->findOrFail($userId);
 
-        if ($user->isLastActiveAdmin()) {
-            $this->dispatch('notify', message: 'Impossible de supprimer le dernier administrateur.');
+            if ($user->isLastActiveAdmin(lockForUpdate: true)) {
+                return 'last_admin';
+            }
 
-            return;
-        }
+            if ($user->payments()->exists() || $user->orders()->exists()) {
+                return 'has_history';
+            }
 
-        if ($user->payments()->exists() || $user->orders()->exists()) {
-            $this->dispatch('notify', message: 'Ce compte a un historique de paiements — suspendez-le plutôt que de le supprimer.');
+            $user->delete();
 
-            return;
-        }
+            return 'deleted';
+        });
 
-        $user->delete();
-        $this->dispatch('notify', message: 'Compte supprimé.');
+        $this->dispatch('notify', message: match ($outcome) {
+            'last_admin' => 'Impossible de supprimer le dernier administrateur.',
+            'has_history' => 'Ce compte a un historique de paiements — suspendez-le plutôt que de le supprimer.',
+            'deleted' => 'Compte supprimé.',
+        });
     }
 
     /* ---------------- Rendu ---------------- */

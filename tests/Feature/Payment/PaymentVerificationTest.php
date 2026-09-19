@@ -108,7 +108,7 @@ class PaymentVerificationTest extends TestCase
 
     public function test_suspended_user_cannot_declare_a_payment(): void
     {
-        $this->learner->update(['status' => 'suspendu']);
+        $this->learner->forceFill(['status' => 'suspendu'])->save();
 
         $this->expectException(HttpException::class);
         $this->declare();
@@ -139,6 +139,27 @@ class PaymentVerificationTest extends TestCase
 
         $this->assertTrue($payment->fresh()->confirm($this->admin));
         $this->assertFalse($payment->fresh()->confirm($this->admin)); // 2e appel : no-op
+    }
+
+    /**
+     * Régression (audit) : ni `confirm()` ni `reject()` ne vérifiaient que l'admin
+     * n'était pas aussi le client — rien n'empêchait structurellement un compte admin,
+     * s'il devenait aussi client de la plateforme, de s'auto-valider son propre paiement.
+     */
+    public function test_an_admin_cannot_confirm_or_reject_their_own_payment(): void
+    {
+        $payment = $this->declare(['user' => $this->admin]);
+
+        $this->assertFalse($payment->fresh()->confirm($this->admin));
+        $this->assertFalse($payment->fresh()->reject($this->admin, 'raison quelconque'));
+        $this->assertSame('a_verifier', $payment->fresh()->status->value);
+
+        Livewire::actingAs($this->admin)
+            ->test(AdminPayments::class)
+            ->call('confirm', $payment->id);
+
+        $this->assertSame('a_verifier', $payment->fresh()->status->value);
+        Mail::assertNotSent(PaymentConfirmedMail::class);
     }
 
     public function test_rejection_keeps_access_locked_and_records_a_reason(): void

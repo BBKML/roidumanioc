@@ -88,7 +88,10 @@ class GoogleController extends Controller
             return $byEmail;
         }
 
-        return User::create([
+        // forceFill (pas create()) : role/status ne sont plus dans $fillable (voir User::$fillable)
+        // pour qu'aucun futur create()/fill() alimenté par une requête ne puisse les définir.
+        $user = new User;
+        $user->forceFill([
             'name' => $profile['name'] ?: Str::before($profile['email'], '@'),
             'email' => $profile['email'],
             'password' => Str::password(32),
@@ -98,6 +101,8 @@ class GoogleController extends Controller
             'status' => 'actif',
             'email_verified_at' => now(),
             'joined_at' => now(),
-        ]);
+        ])->save();
+
+        return $user;
     }
 }

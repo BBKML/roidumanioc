@@ -25,9 +25,19 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, LogsActivity, Notifiable;
 
+    /**
+     * `role`/`status` sont volontairement ABSENTS de cette liste (contrairement à un
+     * premier état de ce fichier) : ce sont les deux champs les plus sensibles du modèle
+     * (élévation de privilège / réactivation d'un compte suspendu) et ne doivent jamais
+     * pouvoir être définis par un simple `create()`/`fill()` alimenté par une requête,
+     * même par erreur dans un futur refactor. Les deux seuls sites légitimes qui les
+     * écrivent (`RegisteredUserController` ne les écrit jamais — défauts BDD ; création
+     * manuelle par un admin dans `Admin\Members::createMember` ; création de compte Google
+     * dans `Auth\GoogleController::resolveUser`) passent explicitement par `forceFill()`.
+     */
     protected $fillable = [
         'name', 'email', 'password', 'password_changed_at',
-        'phone', 'city', 'role', 'status',
+        'phone', 'city',
         'provider', 'provider_id', 'joined_at',
     ];
 
@@ -210,14 +220,31 @@ class User extends Authenticatable
             ->all();
     }
 
-    /** Vrai si retirer/suspendre ce compte laisserait le royaume sans administrateur. */
-    public function isLastActiveAdmin(): bool
+    /**
+     * Vrai si retirer/suspendre ce compte laisserait le royaume sans administrateur.
+     *
+     * `$lockForUpdate` : à passer à `true` dans une `DB::transaction()` avant d'écrire —
+     * sans verrou, deux suspensions croisées quasi simultanées entre les 2 seuls admins
+     * actifs peuvent chacune lire "il en reste un autre" avant que l'autre n'écrive, et
+     * aboutir toutes les deux à zéro administrateur actif (race TOCTOU). Le verrou porte
+     * volontairement sur TOUS les admins actifs (soi-même inclus), pas seulement les
+     * autres : verrouiller uniquement "les autres" ferait porter les deux transactions
+     * concurrentes sur des lignes disjointes (l'une verrouille A, l'autre verrouille B) et
+     * ne les sérialiserait jamais l'une contre l'autre.
+     */
+    public function isLastActiveAdmin(bool $lockForUpdate = false): bool
     {
         if (! $this->isAdmin() || ! $this->isActive()) {
             return false;
         }
 
-        return static::query()->activeAdmins()->whereKeyNot($this->id)->doesntExist();
+        $query = static::query()->activeAdmins();
+
+        if ($lockForUpdate) {
+            $query->lockForUpdate();
+        }
+
+        return $query->pluck('id')->reject(fn ($id) => $id === $this->id)->isEmpty();
     }
 
     public function getActivitylogOptions(): LogOptions

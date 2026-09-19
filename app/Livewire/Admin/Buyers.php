@@ -57,9 +57,10 @@ class Buyers extends Component
             return;
         }
 
-        $user->update([
+        // forceFill (pas update()) : 'status' n'est plus dans User::$fillable.
+        $user->forceFill([
             'status' => $user->isActive() ? UserStatus::Suspendu : UserStatus::Actif,
-        ]);
+        ])->save();
         $this->dispatch('notify', message: $user->isActive() ? 'Compte réactivé.' : 'Compte suspendu.');
     }
 

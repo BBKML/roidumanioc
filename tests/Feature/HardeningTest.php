@@ -2,13 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Actions\DeclarePayment;
+use App\Models\Formation;
 use App\Models\Lesson;
 use App\Models\Payment;
+use App\Models\ProducerProfile;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class HardeningTest extends TestCase
@@ -56,6 +61,50 @@ class HardeningTest extends TestCase
         }
 
         $this->assertTrue(true);
+    }
+
+    /**
+     * Régression (audit) : `producers.favorite.toggle`, `payments.proof` et
+     * `lessons.video`/`lessons.attachment` n'étaient gardées que par `auth`, jamais
+     * `active` — un compte suspendu en session déjà ouverte gardait donc l'accès (favoris,
+     * téléchargement de preuve de paiement, streaming vidéo payant) tant qu'il ne visitait
+     * aucune route gardée par `active`. Les trois portent désormais ['auth', 'active'].
+     */
+    public function test_a_suspended_account_loses_access_to_favorites_and_payment_proof_mid_session(): void
+    {
+        Storage::fake('local');
+
+        $learner = User::factory()->create(['role' => 'apprenant', 'status' => 'actif']);
+        $formation = Formation::create([
+            'title' => 'Culture intensive', 'category' => 'Culture', 'price' => 15000, 'status' => 'publiee',
+        ]);
+        $payment = app(DeclarePayment::class)->handle(
+            user: $learner,
+            payable: $formation,
+            method: 'wave',
+            declaredAmount: 15000,
+            transactionId: 'TX-'.uniqid(),
+            proof: UploadedFile::fake()->image('recu.jpg'),
+        );
+
+        $producerUser = User::factory()->create();
+        $producerProfile = ProducerProfile::create([
+            'user_id' => $producerUser->id, 'business_name' => 'Ferme Test',
+            'zone' => 'Daloa', 'activity_type' => 'recolte',
+        ]);
+
+        // Compte suspendu APRÈS le login (session déjà ouverte) — le scénario réel du bug.
+        $this->actingAs($learner);
+        $learner->forceFill(['status' => 'suspendu'])->save();
+
+        $this->post(route('producers.favorite.toggle', $producerProfile))
+            ->assertRedirect(route('login'));
+        $this->assertGuest();
+
+        $this->actingAs($learner->fresh());
+        $this->get(route('payments.proof', $payment))
+            ->assertRedirect(route('login'));
+        $this->assertGuest();
     }
 
     public function test_dashboard_route_is_cacheable_controller_and_redirects_by_role(): void

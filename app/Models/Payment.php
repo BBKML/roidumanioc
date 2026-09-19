@@ -215,9 +215,22 @@ class Payment extends Model
      * Confirme le paiement et débloque l'inscription ou la commande liée.
      * Idempotent : ne fait rien si le paiement n'est plus « à vérifier ».
      */
+    /**
+     * Un admin ne peut jamais confirmer/rejeter SON PROPRE paiement (self-dealing) — même
+     * garde-fou de principe que les exclusions `Gate::before` sur Collaboration/
+     * ConnectionRequest/Conversation/Review (« jamais confirmer à la place d'une partie »,
+     * ici « jamais juge et partie »). Rien n'empêche structurellement un compte admin
+     * d'être aussi client de la plateforme (formation/boutique) ; sans ce garde-fou, il
+     * pourrait déclarer un paiement puis se l'auto-confirmer via son propre accès admin.
+     */
+    public function canBeDecidedBy(User $admin): bool
+    {
+        return $this->status === PaymentStatus::AVerifier && $this->user_id !== $admin->id;
+    }
+
     public function confirm(User $admin): bool
     {
-        if ($this->status !== PaymentStatus::AVerifier) {
+        if (! $this->canBeDecidedBy($admin)) {
             return false;
         }
 
@@ -238,7 +251,7 @@ class Payment extends Model
 
     public function reject(User $admin, ?string $reason = null): bool
     {
-        if ($this->status !== PaymentStatus::AVerifier) {
+        if (! $this->canBeDecidedBy($admin)) {
             return false;
         }
 

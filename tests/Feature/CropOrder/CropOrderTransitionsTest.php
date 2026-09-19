@@ -389,6 +389,32 @@ class CropOrderTransitionsTest extends TestCase
         $this->assertSame(DeliveryAssistStatus::Annulee, $order->deliveryAssist->status);
     }
 
+    /**
+     * Régression (audit) : `requestDeliveryAssistance()` utilisait `firstOrCreate([], ...)`,
+     * qui réutilisait la ligne `DeliveryAssist` déjà `annulee` sans réinitialiser son statut
+     * — aucune transition ne sortant de `annulee`, la commande restait bloquée dans
+     * `aide_livraison` pour toujours. `updateOrCreate` doit repartir de `demande_aide`.
+     */
+    public function test_requesting_delivery_assistance_again_after_a_cancellation_resets_it(): void
+    {
+        $order = $this->fullyNegotiatedOrder();
+        $order->requestDeliveryAssistance($this->buyerUser);
+        $order->refresh();
+        $order->markDeliveryAssistStep($this->admin, DeliveryAssistStatus::Annulee);
+        $order->refresh();
+
+        $this->assertTrue($order->requestDeliveryAssistance($this->buyerUser));
+        $order->refresh();
+
+        $this->assertSame(CropOrderStatus::AideLivraison, $order->status);
+        $this->assertSame(DeliveryAssistStatus::DemandeAide, $order->deliveryAssist->status);
+        $this->assertNull($order->deliveryAssist->cancelled_at);
+
+        // Et la commande peut de nouveau avancer normalement (elle ne serait plus jamais
+        // sortie de `annulee` avant le correctif).
+        $this->assertTrue($order->markDeliveryAssistStep($this->admin, DeliveryAssistStatus::EnPreparation));
+    }
+
     /* ------------------------------------------------------------------ *
      |  Policy — un admin non-partie ne doit jamais passer une ability party-only
      * ------------------------------------------------------------------ */

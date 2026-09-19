@@ -13,9 +13,10 @@ namespace App\Enums;
  * persistée, seulement une étape du chemin nominal affichée « acquise » par le stepper
  * dès que `terminee` est atteint (même logique que ConnectionRequestStatus::happyPath()).
  *
- * `litige` (déclenché uniquement par l'admin, ou automatiquement si un paiement est
- * contesté — voir contestPayment()) et `annulee` (par l'une des parties, `en_cours`
- * uniquement) gèlent les transitions normales.
+ * `litige` (déclenché exclusivement par l'admin via markDisputed() — jamais
+ * automatiquement : contestPayment() ramène au contraire à `en_cours` pour que l'acheteur
+ * redéclare, voir Collaboration::contestPayment()) et `annulee` (par l'une des parties,
+ * `en_cours` uniquement) gèlent les transitions normales.
  */
 enum CollaborationStatus: string
 {

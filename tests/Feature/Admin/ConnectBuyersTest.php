@@ -85,7 +85,7 @@ class ConnectBuyersTest extends TestCase
     public function test_admin_reactivates_a_suspended_buyer_account(): void
     {
         $profile = $this->makeBuyer('Coopérative Abidjan');
-        $profile->user->update(['status' => 'suspendu']);
+        $profile->user->forceFill(['status' => 'suspendu'])->save();
 
         Livewire::actingAs($this->admin)->test(Buyers::class)
             ->call('toggleSuspend', $profile->id);
@@ -97,7 +97,7 @@ class ConnectBuyersTest extends TestCase
     {
         $active = $this->makeBuyer('Coopérative Active');
         $suspended = $this->makeBuyer('Coopérative Suspendue');
-        $suspended->user->update(['status' => 'suspendu']);
+        $suspended->user->forceFill(['status' => 'suspendu'])->save();
 
         Livewire::actingAs($this->admin)->test(Buyers::class)
             ->set('filter', 'suspendus')

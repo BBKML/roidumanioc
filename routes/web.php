@@ -113,7 +113,7 @@ Route::get('/besoins', PublicNeeds::class)->name('needs.index');
 // Favoris (§11) : ouvert à tout utilisateur connecté (pas seulement un buyer_profiles déjà
 // créé) — contrôleur classique plutôt qu'une action Livewire pour profiter gratuitement du
 // guest→connexion→retour standard du middleware `auth` (cf. FavoriteController).
-Route::middleware('auth')->post('/producteurs/{producerProfile}/favori', FavoriteController::class)
+Route::middleware(['auth', 'active'])->post('/producteurs/{producerProfile}/favori', FavoriteController::class)
     ->name('producers.favorite.toggle');
 Route::get('/placali', [PageController::class, 'placali'])->name('placali.show');
 Route::get('/communaute', [PageController::class, 'communaute'])->name('communaute.show');
@@ -218,10 +218,14 @@ Route::middleware(['auth', 'active'])->prefix('mon-espace')->name('learner.')->g
 });
 
 // Capture de paiement — accessible à l'admin et au propriétaire (contrôle dans le contrôleur).
-Route::middleware('auth')->get('/paiements/{payment}/preuve', PaymentProofController::class)->name('payments.proof');
+// 'active' : un compte suspendu ne doit pas garder l'accès à une preuve de paiement via un
+// lien en session déjà ouverte, même sans repasser par une route gardée par ce middleware.
+Route::middleware(['auth', 'active'])->get('/paiements/{payment}/preuve', PaymentProofController::class)->name('payments.proof');
 
 // Médias de leçon — vidéo téléversée & ressources, gardés par l'inscription (FormationPolicy@follow).
-Route::middleware('auth')->group(function () {
+// 'active' : même raisonnement que payments.proof — sans lui, un compte suspendu en session
+// active garderait le streaming/téléchargement tant qu'il ne visite aucune route 'active'.
+Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/lecons/{lesson}/video', [LessonMediaController::class, 'video'])->name('lessons.video');
     Route::get('/ressources/{attachment}', [LessonMediaController::class, 'attachment'])->name('lessons.attachment');
 });
